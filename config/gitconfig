@@ -1,0 +1,82 @@
+[user]
+	name  = Your Name
+	email = you@example.com
+
+[core]
+	editor     = vim
+	autocrlf   = input
+	whitespace = trailing-space,space-before-tab
+	pager      = delta
+
+[init]
+	defaultBranch = main
+
+[pull]
+	rebase = true
+
+[push]
+	autoSetupRemote = true
+	followTags      = true
+
+[fetch]
+	prune = true
+
+[merge]
+	conflictstyle = zdiff3
+	tool          = vimdiff
+
+[diff]
+	algorithm      = histogram
+	colorMoved     = default
+	colorMovedWS   = allow-indentation-change
+
+[interactive]
+	diffFilter = delta --color-only
+
+[delta]
+	navigate    = true
+	light       = false
+	line-numbers = true
+	side-by-side = true
+
+[rebase]
+	autoSquash  = true
+	autoStash   = true
+	updateRefs  = true
+
+[rerere]
+	enabled = true
+
+[alias]
+	st  = status -sb
+	co  = checkout
+	sw  = switch
+	br  = branch
+	lg  = log --oneline --graph --decorate -20
+	lga = log --oneline --graph --decorate --all
+	d   = diff
+	ds  = diff --staged
+	a   = add
+	aa  = add --all
+	c   = commit
+	ca  = commit --amend --no-edit
+	p   = push
+	pl  = pull --rebase
+	fp  = push --force-with-lease
+	undo = reset HEAD~1 --mixed
+	wip  = commit -am "wip"
+
+[color]
+	ui = auto
+
+[color "diff-highlight"]
+	oldNormal    = red bold
+	oldHighlight = red bold 52
+	newNormal    = green bold
+	newHighlight = green bold 22
+
+[credential]
+	helper = store
+
+[url "git@github.com:"]
+	insteadOf = https://github.com/
