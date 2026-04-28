@@ -1,0 +1,82 @@
+# ── Interactive check ────────────────────────────────────────────────────────
+[[ $- != *i* ]] && return
+
+# ── Environment ───────────────────────────────────────────────────────────────
+export EDITOR="vim"
+export VISUAL="$EDITOR"
+export LANG="en_US.UTF-8"
+export LC_ALL="en_US.UTF-8"
+
+path_prepend() { [[ ":$PATH:" != *":$1:"* ]] && export PATH="$1:$PATH"; }
+path_prepend "$HOME/.local/bin"
+path_prepend "$HOME/bin"
+
+# ── History ───────────────────────────────────────────────────────────────────
+HISTSIZE=50000
+HISTFILESIZE=50000
+HISTCONTROL=ignoredups:erasedups
+shopt -s histappend
+PROMPT_COMMAND="history -a; history -c; history -r; $PROMPT_COMMAND"
+
+# ── Prompt ────────────────────────────────────────────────────────────────────
+_git_branch() {
+  local branch
+  branch="$(git symbolic-ref --short HEAD 2>/dev/null)" || return
+  echo " ($branch)"
+}
+
+GREEN='\[\e[32m\]'
+BLUE='\[\e[34m\]'
+YELLOW='\[\e[33m\]'
+RESET='\[\e[0m\]'
+PS1="${GREEN}\u@\h${RESET}:${BLUE}\w${YELLOW}\$(_git_branch)${RESET}\$ "
+
+# ── Aliases ───────────────────────────────────────────────────────────────────
+alias ..='cd ..'
+alias ...='cd ../..'
+
+alias ls='ls --color=auto'
+alias ll='ls -lah'
+alias rm='rm -i'
+alias cp='cp -i'
+alias mv='mv -i'
+
+command -v bat    &>/dev/null && alias cat='bat --paging=never'
+command -v batcat &>/dev/null && alias cat='batcat --paging=never'
+command -v rg     &>/dev/null && alias grep='rg'
+
+alias g='git'
+alias gs='git status -sb'
+alias gd='git diff'
+alias ga='git add'
+alias gc='git commit'
+alias gp='git push'
+alias gpl='git pull --rebase'
+alias gl='git log --oneline --graph --decorate -20'
+
+alias cls='clear'
+alias reload='exec bash'
+
+# ── fzf ───────────────────────────────────────────────────────────────────────
+[[ -f /usr/share/doc/fzf/examples/key-bindings.bash ]] && \
+  source /usr/share/doc/fzf/examples/key-bindings.bash
+[[ -f ~/.fzf.bash ]] && source ~/.fzf.bash
+
+# ── Functions ─────────────────────────────────────────────────────────────────
+mkcd() { mkdir -p "$1" && cd "$1"; }
+
+extract() {
+  case "$1" in
+    *.tar.bz2) tar xjf "$1" ;;
+    *.tar.gz)  tar xzf "$1" ;;
+    *.tar.xz)  tar xJf "$1" ;;
+    *.bz2)     bunzip2 "$1" ;;
+    *.gz)      gunzip "$1" ;;
+    *.zip)     unzip "$1" ;;
+    *.7z)      7z x "$1" ;;
+    *)         echo "Don't know how to extract '$1'" ;;
+  esac
+}
+
+# ── Local overrides ───────────────────────────────────────────────────────────
+[[ -f "$HOME/.bashrc.local" ]] && source "$HOME/.bashrc.local"
