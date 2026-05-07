@@ -85,14 +85,17 @@ async def cmd_select_notebook(args: argparse.Namespace) -> None:
 
 async def cmd_add_source(args: argparse.Namespace) -> None:
     notebook_id = _resolve_notebook_id(args.notebook)
+    file_path: Path | None = None
+    if args.file:
+        file_path = Path(args.file).expanduser().resolve()
+        if not file_path.is_file():
+            raise SystemExit(f"ファイルが存在しません: {file_path}")
     async with await NotebookLMClient.from_storage() as client:
         if args.url:
             result = await client.sources.add_url(notebook_id, args.url, wait=args.wait)
         else:
-            path = Path(args.file).expanduser().resolve()
-            if not path.is_file():
-                raise SystemExit(f"ファイルが存在しません: {path}")
-            result = await client.sources.add_file(notebook_id, str(path), wait=args.wait)
+            assert file_path is not None
+            result = await client.sources.add_file(notebook_id, str(file_path), wait=args.wait)
         _emit({"notebook_id": notebook_id, "result": str(result)})
 
 
