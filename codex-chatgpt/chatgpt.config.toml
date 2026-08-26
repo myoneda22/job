@@ -1,0 +1,24 @@
+# Codex を「API キーなし」で使うためのプロファイル。
+#
+# インストール先 : $CODEX_HOME/chatgpt.config.toml (既定: ~/.codex/chatgpt.config.toml)
+# 使い方         : codex -p chatgpt ...
+#
+# `codex -p <name>` は $CODEX_HOME/<name>.config.toml をベース設定の上に
+# レイヤーする (codex 0.14x 以降の profile v2)。ここに書いた値は
+# `-p chatgpt` を付けたときだけ効き、素の `codex` には影響しない。
+
+# ChatGPT アカウント (Plus / Pro / Business / Enterprise) でのログインを強制する。
+# auth.json が API キーモードだった場合、Codex は起動時に
+#   "ChatGPT login is required, but an API key is currently being used. Logging out."
+# と表示して auth.json を破棄し、ChatGPT ログインをやり直させる。
+# 取りうる値は "chatgpt" / "api" の 2 つ。
+forced_login_method = "chatgpt"
+
+# --- 以下は任意。必要ならコメントを外す --------------------------------
+
+# 使用モデル (未指定なら Codex の既定モデル)
+# model = "gpt-5.1-codex-max"
+
+# 既定のサンドボックス / 承認ポリシー
+# sandbox_mode = "workspace-write"
+# approval_policy = "on-request"
