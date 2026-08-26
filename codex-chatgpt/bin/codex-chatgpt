@@ -1,0 +1,62 @@
+#!/usr/bin/env bash
+#
+# codex-chatgpt — API キーを使わずに Codex CLI を起動するラッパー。
+#
+#   codex-chatgpt                      # 対話 TUI
+#   codex-chatgpt exec "..."           # ヘッドレス実行
+#   codex-chatgpt login                # ChatGPT アカウントでログイン
+#   codex-chatgpt login --device-auth  # ブラウザのない環境でのログイン
+#   codex-chatgpt login status         # ログイン状態の確認
+#   codex-chatgpt logout
+#
+# 実体は `codex -p <profile>` に環境変数の掃除を足しただけ。
+# プロファイルは install.sh が $CODEX_HOME/<profile>.config.toml に置く。
+#
+# 環境変数:
+#   CODEX_BIN               codex 実行ファイル (既定: PATH 上の codex)
+#   CODEX_HOME              Codex のホーム   (既定: ~/.codex)
+#   CODEX_CHATGPT_PROFILE   プロファイル名   (既定: chatgpt)
+
+set -euo pipefail
+
+CODEX_BIN="${CODEX_BIN:-codex}"
+CODEX_HOME="${CODEX_HOME:-$HOME/.codex}"
+PROFILE="${CODEX_CHATGPT_PROFILE:-chatgpt}"
+PROFILE_FILE="$CODEX_HOME/$PROFILE.config.toml"
+
+export CODEX_HOME
+
+die() {
+  printf 'codex-chatgpt: %s\n' "$*" >&2
+  exit 1
+}
+
+command -v "$CODEX_BIN" >/dev/null 2>&1 ||
+  die "codex が見つかりません。'npm install -g @openai/codex' を実行してください。"
+
+# codex は -p に渡したプロファイルのファイルが無くても黙って無視するため、
+# ここで存在確認しておく (無いと API キー禁止が効かないまま起動してしまう)。
+[ -f "$PROFILE_FILE" ] ||
+  die "プロファイルがありません: $PROFILE_FILE
+    codex-chatgpt/install.sh を実行してインストールしてください。"
+
+# codex は auth.json が無くても OPENAI_API_KEY / CODEX_API_KEY を
+# 認証情報として拾う。しかも forced_login_method="chatgpt" は
+# 環境変数経由のキーを止められないので、ここで確実に外す。
+if [ -n "${OPENAI_API_KEY:-}" ] || [ -n "${CODEX_API_KEY:-}" ]; then
+  printf 'codex-chatgpt: API キーの環境変数を無視します (ChatGPT ログインを使用)\n' >&2
+fi
+unset OPENAI_API_KEY CODEX_API_KEY
+
+# `codex login` / `codex logout` は -p を受け付けないので、
+# 同じ強制設定を -c で個別に渡す。
+case "${1-}" in
+  login | logout)
+    subcommand="$1"
+    shift
+    exec "$CODEX_BIN" "$subcommand" -c 'forced_login_method="chatgpt"' "$@"
+    ;;
+  *)
+    exec "$CODEX_BIN" -p "$PROFILE" "$@"
+    ;;
+esac
