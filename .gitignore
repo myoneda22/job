@@ -1,0 +1,24 @@
+# NotebookLM の認証情報（絶対にコミットしない）
+.notebooklm/
+storage_state.json
+master_token.json
+*.cookies.json
+
+# ローカル設定
+.env
+.env.local
+config/codex.config.toml
+config/claude-mcp.json
+notebooks.yaml
+
+# 生成物・ダウンロード
+study/
+briefings/
+*.m4a
+*.mp3
+*.mp4
+
+# ログ・作業ファイル
+logs/
+*.log
+.DS_Store

@@ -1,0 +1,34 @@
+{
+  "_comment": [
+    "Claude Code は ~/.claude.json、Cursor は ~/.cursor/mcp.json、",
+    "Windsurf は ~/.codeium/windsurf/mcp_config.json に配置します。",
+    "自動設定コマンド（既存のサーバー定義を壊しません）:",
+    "  notebooklm mcp install claude-code",
+    "  notebooklm mcp install claude-desktop",
+    "  notebooklm mcp install cursor",
+    "  notebooklm mcp install windsurf",
+    "設定後はクライアントを再起動してください。",
+    "notebooklm-browser は代替/フォールバック構成です（docs/03、docs/06 §6）。"
+  ],
+
+  "mcpServers": {
+    "notebooklm": {
+      "command": "uvx",
+      "args": ["--from", "notebooklm-py[mcp]", "notebooklm-mcp"],
+      "env": {
+        "PYTHONUTF8": "1",
+        "PYTHONIOENCODING": "utf-8"
+      }
+    },
+
+    "notebooklm-browser": {
+      "command": "npx",
+      "args": ["notebooklm-mcp@latest"],
+      "env": {
+        "NOTEBOOKLM_PROFILE": "minimal",
+        "NOTEBOOKLM_DISABLED_TOOLS": "cleanup_data,re_auth",
+        "ANSWER_TIMEOUT_MS": "900000"
+      }
+    }
+  }
+}
