@@ -1,0 +1,55 @@
+# Codex CLI 設定例 — ~/.codex/config.toml に該当ブロックを追記してください。
+#
+# CLI から追加する場合（推奨・冪等）:
+#   codex mcp add notebooklm -- uvx --from "notebooklm-py[mcp]" notebooklm-mcp
+#   codex mcp list
+#
+# 注意: notebooklm-py[mcp] と npm の notebooklm-mcp は同名のバイナリ
+#       `notebooklm-mcp` を作ります。どちらを起動するか曖昧にしないため、
+#       ここでは uvx / npx の形で明示しています。
+
+# --- 推奨構成: notebooklm-py（内部 RPC 直叩き。生成物フル対応） -------------
+[mcp_servers.notebooklm]
+command = "uvx"
+args = ["--from", "notebooklm-py[mcp]", "notebooklm-mcp"]
+
+# 既定は 10 秒。uvx の初回依存解決で超過しやすいので延ばす
+startup_timeout_sec = 60
+# audio / video / slide-deck の生成は数分〜10 分かかる
+tool_timeout_sec = 600
+
+# uv tool install 済みなら、依存解決を挟まない分だけ起動が速い:
+#   command = "notebooklm-mcp"
+#   args = ["--profile", "default"]
+
+[mcp_servers.notebooklm.env]
+# Windows の cp932 文字化け対策（docs/04）
+PYTHONUTF8 = "1"
+PYTHONIOENCODING = "utf-8"
+# 複数エージェントを並走させるならプロファイルを分ける
+# NOTEBOOKLM_PROFILE = "agent-1"
+# ログを増やす: DEBUG / INFO / WARNING / ERROR
+# NOTEBOOKLM_LOG_LEVEL = "INFO"
+
+
+# --- 代替 / フォールバック構成: notebooklm-mcp（Chrome 自動化） -------------
+# 有効化する場合は以下のコメントを外してください。
+# 壊れ方が py 系と独立しているため、冗長化に有効です（docs/06 §6）。
+#
+# [mcp_servers.notebooklm-browser]
+# command = "npx"
+# args = ["notebooklm-mcp@latest"]
+# startup_timeout_sec = 90
+# tool_timeout_sec = 900
+#
+# [mcp_servers.notebooklm-browser.env]
+# # ツールを 5 個に絞ってコンテキストを節約（minimal / standard / full）
+# NOTEBOOKLM_PROFILE = "minimal"
+# # 破壊的なツールを落とす
+# NOTEBOOKLM_DISABLED_TOOLS = "cleanup_data,re_auth"
+# # 回答待ちの上限（既定 600000 = 10 分）
+# ANSWER_TIMEOUT_MS = "900000"
+# # macOS Tahoe / Windows で Chrome が起動しない場合に同梱 Chromium を強制
+# # BROWSER_CHANNEL = "chromium"
+# # 複数 Google アカウントを使い分ける
+# # NOTEBOOKLM_ACCOUNT = "work"
