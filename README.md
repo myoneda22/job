@@ -179,19 +179,29 @@ MCP SDK が未導入の環境では MCP のテストのみスキップされま�
 実際の API に対して確認済み:
 
 - `status` / `models` / `ask` / `ask --stream`
-- JSON スキーマ出力（`company` の2回目の呼び出し）
-- `url_context` が検索クォータの影響を受けないこと（429 にならない）
-- 取得失敗時に Gemini が記憶から回答してしまうこと、および明示指示があれば正直に
-  申告すること（この挙動が `require_retrieval()` の設計根拠です）
-- タイムアウトがきれいなエラーになること
+- JSON スキーマ出力（`company` の構造化ステップ）
+- `url_context` が検索クォータの影響を受けないこと（`google_search` が 429 の状況で 200）
+- **`url_context` でのページ取得成功**。`https://www.iana.org/help/example-domains` が
+  `URL_RETRIEVAL_STATUS_SUCCESS` を返し、要約もページ内容と一致しました。
+- **取得失敗時のガード**。同じ実行で `https://example.com/` は
+  `URL_RETRIEVAL_STATUS_ERROR` となり、`grounded: false` として報告され、終了コード 1 に
+  なりました（`example.com` は個別に Google のフェッチャーを弾いているようです）。
+- 取得失敗時に、明示指示がなければ Gemini が記憶から回答してしまうこと。
+  これが `require_retrieval()` の設計根拠です。
+- タイムアウトがきれいなエラーになること。
 
-**未検証**:
+**未検証**: 検索グラウンディングを使う経路（`search`、`company` の検索版、`gemini_search`、
+`gemini_research_company`）。グラウンディング専用クォータが尽きており一貫して 429 になるためで、
+コード側の問題ではありません（素の生成は同じモデル・同じキーで成功します）。
+`--url` を使う経路はこの制約を受けないので、当面はそちらが実用的な代替になります。
 
-- 検索グラウンディングを使う経路（`search`、`company` の検索版、`gemini_search`、
-  `gemini_research_company`）。グラウンディング専用クォータが尽きており 429 になるためで、
-  コード側の問題ではありません（素の生成は同じモデル・同じキーで成功します）。
-- `url_context` でのページ取得成功。試した全URLで `URL_RETRIEVAL_STATUS_ERROR` か、
-  Google 側の 503（"This model is currently experiencing high demand"）でした。
-  API がツールを受け付けること自体は確認済みですが、**取得成功の実例はまだ取れていません。**
+## 無料枠の制限（実測）
 
-いずれも課金を有効にするか、時間をおいて再試行することで確認できるはずです。
+無料枠は想像よりかなり狭く、開発中に両方とも使い切りました。
+
+- 通常生成: `generate_content_free_tier_requests` が **20リクエスト**（モデル単位）。
+  超えると 429 で、エラーに `retryDelay`（実測 約60秒）が付きます。クライアントはこれを
+  尊重してバックオフします。
+- 検索グラウンディング: 別枠で、こちらが先に尽きます。
+
+実運用（653社の定期更新など）では課金の有効化が事実上必須です。
