@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "gemini-link"
+version = "0.1.0"
+description = "Gemini integration for the job-hunting (shukatsu) workflow: API client, grounded company research, Claude<->Gemini cross-checking, and an MCP server."
+requires-python = ">=3.10"
+dependencies = []
+
+[project.optional-dependencies]
+# The core library needs nothing but the standard library. The MCP server does.
+mcp = ["mcp>=2"]
+dev = ["pytest>=8"]
+
+[project.scripts]
+gemini-link = "gemini_link.cli:main"
+gemini-link-mcp = "gemini_link.mcp_server:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
