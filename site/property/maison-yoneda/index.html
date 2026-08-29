@@ -1,0 +1,508 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- ============================================================
+     公開前チェックリスト
+     [ ] 下の CANONICAL_ORIGIN を実ドメインに一括置換（現在 https://example.com）
+     [ ] 「要確認」バッジの項目に実データを入れる（検索は class="tbd"）
+     [ ] JSON-LD 内の TODO コメント行を実データで有効化
+     [ ] id="draft-note" のバナーを削除
+     [ ] OGP 画像 /assets/maison-yoneda-og.jpg を用意
+     [ ] Bing Webmaster Tools / Google Search Console に URL 送信
+     ============================================================ -->
+
+<title>Maison Yoneda（メゾンヨネダ）｜川崎市高津区溝口5・高津駅徒歩5分の賃貸</title>
+<meta name="description" content="Maison Yoneda（メゾンヨネダ）は神奈川県川崎市高津区溝口5丁目、東急田園都市線 高津駅 徒歩5分の賃貸物件です。建物概要、設備、空室状況、周辺環境、お問い合わせ先を掲載しています。">
+<link rel="canonical" href="https://example.com/property/maison-yoneda/">
+
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Maison Yoneda">
+<meta property="og:title" content="Maison Yoneda（メゾンヨネダ）｜川崎市高津区溝口5・高津駅徒歩5分の賃貸">
+<meta property="og:description" content="神奈川県川崎市高津区溝口5丁目、東急田園都市線 高津駅 徒歩5分の賃貸物件「Maison Yoneda」の公式ページ。">
+<meta property="og:url" content="https://example.com/property/maison-yoneda/">
+<meta property="og:image" content="https://example.com/assets/maison-yoneda-og.jpg">
+<meta property="og:locale" content="ja_JP">
+<meta name="twitter:card" content="summary_large_image">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Shippori+Mincho+B1:wght@600;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+
+<!-- 建物そのもののエンティティ定義。同名異物件との識別はここと本文冒頭の2箇所で行う。
+     TODO 実データが揃ったら以下を追記する（推測値は入れないこと）:
+       "geo": { "@type": "GeoCoordinates", "latitude": …, "longitude": … }   ← 実測値のみ
+       "numberOfAccommodationUnits": …                                        ← 総戸数
+       "photo": ["https://example.com/assets/…jpg"]                           ← 外観・共用部の実写
+       "amenityFeature": [ { "@type": "LocationFeatureSpecification",
+                             "name": "オートロック", "value": true } ]        ← 設備
+       "containsPlace": [ { "@type": "Apartment", … } ]                       ← 各住戸
+-->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "ApartmentComplex",
+  "@id": "https://example.com/property/maison-yoneda/#building",
+  "name": "Maison Yoneda",
+  "alternateName": ["メゾンヨネダ", "メゾン米田", "Maison Yoneda 高津"],
+  "url": "https://example.com/property/maison-yoneda/",
+  "description": "神奈川県川崎市高津区溝口5丁目にある賃貸物件。東急田園都市線 高津駅より徒歩5分。",
+  "address": {
+    "@type": "PostalAddress",
+    "addressCountry": "JP",
+    "addressRegion": "神奈川県",
+    "addressLocality": "川崎市高津区",
+    "streetAddress": "溝口5丁目",
+    "postalCode": "213-0001"
+  }
+}
+</script>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    { "@type": "ListItem", "position": 1, "name": "ホーム", "item": "https://example.com/" },
+    { "@type": "ListItem", "position": 2, "name": "物件一覧", "item": "https://example.com/property/" },
+    { "@type": "ListItem", "position": 3, "name": "Maison Yoneda", "item": "https://example.com/property/maison-yoneda/" }
+  ]
+}
+</script>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "Maison Yoneda はどこにありますか？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "神奈川県川崎市高津区溝口5丁目にあります。東急田園都市線 高津駅より徒歩5分です。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "朝霞市や板橋区にある「メゾンヨネダ」と同じ建物ですか？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "いいえ、別の建物です。埼玉県朝霞市北原および東京都板橋区前野町にも同名の物件がありますが、本ページで扱うのは神奈川県川崎市高津区溝口5丁目の Maison Yoneda です。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "高津駅には東急大井町線も停まりますか？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "停まりません。高津駅に停車するのは東急田園都市線のみで、大井町線の列車は通過します。大井町線を利用する場合は隣の溝の口駅をご利用ください。"
+      }
+    }
+  ]
+}
+</script>
+
+<style>
+  :root{
+    --ground:#ECEEEA;
+    --surface:#FBFCFA;
+    --surface-2:#E1E6DE;
+    --ink:#1A1F1B;
+    --ink-2:#4B554D;
+    --ink-3:#79847B;
+    --rule:#D1D8CE;
+    --rule-soft:#E0E5DD;
+    --accent:#2F5D46;
+    --accent-2:#4C8168;
+    --accent-soft:#DEEAE2;
+    --tbd:#8A5A1B;
+    --tbd-bg:#F1E6D1;
+    --shadow:0 1px 2px rgba(26,31,27,.05), 0 10px 28px -16px rgba(26,31,27,.24);
+    --display:"Shippori Mincho B1","Hiragino Mincho ProN","Yu Mincho",serif;
+    --body:"Zen Kaku Gothic New","Hiragino Kaku Gothic ProN","Yu Gothic",system-ui,sans-serif;
+    --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --ground:#131714;--surface:#1B201C;--surface-2:#242A25;
+      --ink:#E8EDE7;--ink-2:#A2AEA4;--ink-3:#7C887E;
+      --rule:#2D352E;--rule-soft:#252C26;
+      --accent:#8CC0A5;--accent-2:#6FA98C;--accent-soft:#1F2A23;
+      --tbd:#D9AE68;--tbd-bg:#2C2617;
+      --shadow:0 1px 2px rgba(0,0,0,.45), 0 10px 28px -16px rgba(0,0,0,.8);
+    }
+  }
+  :root[data-theme="dark"]{
+    --ground:#131714;--surface:#1B201C;--surface-2:#242A25;
+    --ink:#E8EDE7;--ink-2:#A2AEA4;--ink-3:#7C887E;
+    --rule:#2D352E;--rule-soft:#252C26;
+    --accent:#8CC0A5;--accent-2:#6FA98C;--accent-soft:#1F2A23;
+    --tbd:#D9AE68;--tbd-bg:#2C2617;
+    --shadow:0 1px 2px rgba(0,0,0,.45), 0 10px 28px -16px rgba(0,0,0,.8);
+  }
+
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  @media (prefers-reduced-motion: reduce){html{scroll-behavior:auto} *{animation:none!important;transition:none!important}}
+  body{
+    margin:0;background:var(--ground);color:var(--ink);
+    font-family:var(--body);font-size:16px;line-height:1.85;
+    -webkit-font-smoothing:antialiased;font-feature-settings:"palt" 1;
+  }
+  .wrap{max-width:880px;margin:0 auto;padding:0 24px}
+  .measure{max-width:36em}
+  a{color:var(--accent);text-underline-offset:3px}
+  a:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:3px}
+
+  /* ---- draft banner (公開前に削除) ---- */
+  #draft-note{
+    background:var(--tbd-bg);color:var(--tbd);
+    font-family:var(--mono);font-size:12.5px;line-height:1.7;
+    padding:12px 24px;text-align:center;border-bottom:1px solid var(--rule);
+  }
+  #draft-note b{font-weight:500}
+
+  /* ---- breadcrumb ---- */
+  .crumbs{font-family:var(--mono);font-size:11.5px;color:var(--ink-3);padding:22px 0 0;letter-spacing:.03em}
+  .crumbs a{color:var(--ink-3);text-decoration:none}
+  .crumbs a:hover{color:var(--accent);text-decoration:underline}
+  .crumbs span{margin:0 8px;opacity:.55}
+
+  /* ---- hero ---- */
+  .hero{padding:34px 0 40px;border-bottom:1px solid var(--rule)}
+  .hero .kana{font-family:var(--mono);font-size:12px;letter-spacing:.16em;color:var(--accent);margin:0 0 14px}
+  h1{
+    font-family:var(--display);font-weight:700;
+    font-size:clamp(28px,5vw,44px);line-height:1.3;letter-spacing:.01em;
+    margin:0 0 16px;text-wrap:balance;
+  }
+  h1 .sub{display:block;font-size:.5em;font-weight:600;color:var(--ink-2);margin-top:12px;letter-spacing:.02em;line-height:1.6}
+  .addr{margin:0;color:var(--ink-2);font-size:15.5px}
+
+  .facts{
+    display:grid;gap:1px;background:var(--rule);border:1px solid var(--rule);
+    border-radius:5px;overflow:hidden;margin-top:28px;grid-template-columns:1fr;
+  }
+  @media(min-width:640px){.facts{grid-template-columns:repeat(3,1fr)}}
+  .fact{background:var(--surface);padding:18px 20px}
+  .fact dt{font-family:var(--mono);font-size:11px;letter-spacing:.1em;color:var(--ink-3);margin:0 0 6px}
+  .fact dd{margin:0;font-size:17px;font-weight:700;line-height:1.5}
+  .fact dd small{display:block;font-size:12.5px;font-weight:400;color:var(--ink-2);margin-top:3px}
+
+  /* ---- sections ---- */
+  section{padding:52px 0 0}
+  .eyebrow{
+    font-family:var(--mono);font-size:11.5px;letter-spacing:.13em;text-transform:uppercase;
+    color:var(--accent);margin:0 0 10px;padding-left:12px;border-left:2px solid var(--accent);
+  }
+  h2{font-family:var(--display);font-weight:600;font-size:clamp(20px,3vw,26px);line-height:1.5;margin:0 0 18px;text-wrap:balance}
+  h3{font-size:15.5px;font-weight:700;margin:26px 0 8px}
+  p{margin:0 0 16px}
+
+  /* ---- disambiguation: このページの中核 ---- */
+  .identity{
+    background:var(--accent-soft);border-left:3px solid var(--accent);border-radius:5px;
+    padding:24px 26px;margin:0;
+  }
+  .identity .lab{
+    font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;
+    color:var(--accent);display:block;margin-bottom:10px;
+  }
+  .identity p{margin:0 0 12px;font-size:15px}
+  .identity p:last-child{margin-bottom:0}
+  .identity ul{margin:0;padding-left:1.2em;font-size:14.5px;color:var(--ink-2)}
+  .identity li{margin-bottom:5px}
+  .identity li::marker{color:var(--accent-2)}
+
+  /* ---- spec table ---- */
+  .scroller{overflow-x:auto;border:1px solid var(--rule-soft);border-radius:5px;background:var(--surface);box-shadow:var(--shadow)}
+  table{border-collapse:collapse;width:100%;font-size:14.5px;min-width:440px}
+  th,td{text-align:left;padding:13px 18px;border-bottom:1px solid var(--rule-soft);vertical-align:top;line-height:1.7}
+  tbody th{
+    font-weight:500;color:var(--ink-2);width:34%;background:var(--surface-2);
+    border-right:1px solid var(--rule-soft);white-space:nowrap;
+  }
+  tbody tr:last-child th,tbody tr:last-child td{border-bottom:0}
+  td .note{display:block;font-size:12.5px;color:var(--ink-3);margin-top:3px}
+
+  .tbd{
+    display:inline-block;font-family:var(--mono);font-size:11px;font-weight:500;
+    background:var(--tbd-bg);color:var(--tbd);padding:2px 9px;border-radius:100px;letter-spacing:.04em;
+  }
+
+  /* ---- access ---- */
+  .routes{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+  .route{
+    background:var(--surface);border:1px solid var(--rule-soft);border-radius:5px;
+    padding:15px 18px;display:flex;flex-wrap:wrap;gap:4px 14px;align-items:baseline;
+  }
+  .route .line{font-weight:700;font-size:15px}
+  .route .stn{color:var(--ink-2);font-size:14.5px}
+  .route .min{margin-left:auto;font-family:var(--mono);font-size:13px;color:var(--accent);font-variant-numeric:tabular-nums;white-space:nowrap}
+
+  /* ---- vacancy ---- */
+  .vacancy{
+    background:var(--surface);border:1px solid var(--rule-soft);border-radius:5px;
+    padding:28px 26px;text-align:center;box-shadow:var(--shadow);
+  }
+  .vacancy p{margin:0 0 18px;color:var(--ink-2);font-size:15px}
+  .btn{
+    display:inline-block;background:var(--accent);color:var(--ground);
+    font-weight:700;font-size:15px;text-decoration:none;
+    padding:13px 32px;border-radius:4px;
+  }
+  .btn:hover{background:var(--accent-2)}
+
+  /* ---- checklists ---- */
+  .cols{display:grid;gap:22px;grid-template-columns:1fr}
+  @media(min-width:640px){.cols{grid-template-columns:1fr 1fr}}
+  .card{background:var(--surface);border:1px solid var(--rule-soft);border-radius:5px;padding:20px 22px}
+  .card h3{margin-top:0}
+  .card ul{margin:0;padding-left:1.2em;font-size:14.5px;color:var(--ink-2)}
+  .card li{margin-bottom:6px}
+  .card li::marker{color:var(--accent-2)}
+
+  /* ---- FAQ ---- */
+  details{
+    background:var(--surface);border:1px solid var(--rule-soft);border-radius:5px;
+    margin-bottom:10px;overflow:hidden;
+  }
+  summary{
+    cursor:pointer;padding:16px 20px;font-weight:700;font-size:15px;list-style:none;
+    display:flex;gap:14px;align-items:flex-start;
+  }
+  summary::-webkit-details-marker{display:none}
+  summary::before{content:"Q";font-family:var(--mono);color:var(--accent);font-size:13px;flex:none;padding-top:2px}
+  details[open] summary{border-bottom:1px solid var(--rule-soft)}
+  details .a{padding:16px 20px 18px 54px;font-size:14.5px;color:var(--ink-2);line-height:1.85}
+  details .a p{margin:0}
+
+  footer{
+    margin-top:64px;padding:30px 0 72px;border-top:1px solid var(--rule);
+    font-size:13px;color:var(--ink-3);line-height:1.9;
+  }
+  footer .name{font-family:var(--display);font-size:16px;color:var(--ink-2);margin:0 0 6px}
+</style>
+</head>
+<body>
+
+<!-- 公開前に削除: この1要素のみ -->
+<aside id="draft-note">
+  <b>制作中のドラフト</b> ── <span class="tbd" style="background:none;padding:0">要確認</span> のバッジが付いた項目に実データを入れ、ドメインを置換してから公開してください。このバナーは公開前に削除します。
+</aside>
+
+<div class="wrap">
+
+  <nav class="crumbs" aria-label="パンくず">
+    <a href="/">ホーム</a><span>/</span><a href="/property/">物件一覧</a><span>/</span>Maison Yoneda
+  </nav>
+
+  <header class="hero">
+    <p class="kana">メゾンヨネダ ／ 川崎市高津区</p>
+    <h1>Maison Yoneda
+      <span class="sub">川崎市高津区溝口5丁目・東急田園都市線 高津駅 徒歩5分の賃貸</span>
+    </h1>
+    <p class="addr">神奈川県川崎市高津区溝口5丁目</p>
+
+    <dl class="facts">
+      <div class="fact">
+        <dt>最寄駅</dt>
+        <dd>高津駅<small>東急田園都市線</small></dd>
+      </div>
+      <div class="fact">
+        <dt>徒歩</dt>
+        <dd>5分<small>高津駅より</small></dd>
+      </div>
+      <div class="fact">
+        <dt>空室</dt>
+        <dd><span class="tbd">要確認</span><small>下記「空室状況」をご覧ください</small></dd>
+      </div>
+    </dl>
+  </header>
+
+  <!-- ここが本ページの中核。同名異物件が複数実在し、検索意図が混線しているため
+       検索エンジン・生成AIに対して明示的に実体を切り分ける。 -->
+  <section id="identity">
+    <p class="eyebrow">この建物について</p>
+    <h2>お探しの「Maison Yoneda」はこの建物ですか</h2>
+    <div class="identity">
+      <span class="lab">物件の特定</span>
+      <p>本ページで扱うのは、<strong>神奈川県川崎市高津区溝口5丁目</strong>にある賃貸物件「Maison Yoneda（メゾンヨネダ）」です。東急田園都市線 高津駅より徒歩5分に位置します。</p>
+      <p>同名・類似名の物件が各地に実在します。以下は<strong>いずれも別の建物</strong>です。</p>
+      <ul>
+        <li>メゾンヨネダ（埼玉県朝霞市北原）── 東武東上線 朝霞駅 徒歩約11分</li>
+        <li>メゾン米田（東京都板橋区前野町）</li>
+      </ul>
+      <p style="margin-top:12px">また、<strong>Maison Yoshiki Paris</strong>、<strong>MAISON YONA</strong>、写真家 米田知子（Tomoko Yoneda）氏、建築家 米田明（Akira Yoneda）氏とは一切関係がありません。</p>
+    </div>
+  </section>
+
+  <section id="overview">
+    <p class="eyebrow">Overview</p>
+    <h2>物件概要</h2>
+    <div class="scroller">
+      <table>
+        <tbody>
+          <tr><th>建物名</th><td>Maison Yoneda（メゾンヨネダ）</td></tr>
+          <tr><th>所在地</th><td>神奈川県川崎市高津区溝口5丁目<span class="note">丁目以下の地番は内見予約時にご案内します</span></td></tr>
+          <tr><th>交通</th><td>東急田園都市線「高津」駅 徒歩5分</td></tr>
+          <!-- TODO: 以下、登記簿・管理会社資料で確認して置換 -->
+          <tr><th>建物種別</th><td><span class="tbd">要確認</span><span class="note">アパート／マンションの別</span></td></tr>
+          <tr><th>構造</th><td><span class="tbd">要確認</span><span class="note">木造／鉄骨造／RC造 の別</span></td></tr>
+          <tr><th>階数</th><td><span class="tbd">要確認</span></td></tr>
+          <tr><th>築年月</th><td><span class="tbd">要確認</span></td></tr>
+          <tr><th>総戸数</th><td><span class="tbd">要確認</span></td></tr>
+          <tr><th>間取り</th><td><span class="tbd">要確認</span></td></tr>
+          <tr><th>駐車場・駐輪場</th><td><span class="tbd">要確認</span></td></tr>
+          <tr><th>管理形態</th><td><span class="tbd">要確認</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="access">
+    <p class="eyebrow">Access</p>
+    <h2>アクセス</h2>
+    <ul class="routes">
+      <li class="route">
+        <span class="line">東急田園都市線</span>
+        <span class="stn">高津駅</span>
+        <span class="min">徒歩 5 分</span>
+      </li>
+      <!-- TODO: 実測して分数を入れる。溝の口／武蔵溝ノ口は乗換の要なので必ず記載したい。 -->
+      <li class="route">
+        <span class="line">東急田園都市線・大井町線</span>
+        <span class="stn">溝の口駅</span>
+        <span class="min"><span class="tbd">要確認</span></span>
+      </li>
+      <li class="route">
+        <span class="line">JR南武線</span>
+        <span class="stn">武蔵溝ノ口駅</span>
+        <span class="min"><span class="tbd">要確認</span></span>
+      </li>
+    </ul>
+    <p class="measure" style="margin-top:16px;font-size:14.5px;color:var(--ink-2)">
+      高津駅に停車するのは<strong>東急田園都市線のみ</strong>です。大井町線の列車は高津駅を通過するため、大井町線をご利用の場合は隣の溝の口駅が最寄りとなります。渋谷駅までは田園都市線で乗り換えなしです。
+    </p>
+  </section>
+
+  <section id="vacancy">
+    <p class="eyebrow">Vacancy</p>
+    <h2>空室状況</h2>
+    <div class="vacancy">
+      <!-- TODO: 空室が出たら部屋ごとに RealEstateListing / Offer の JSON-LD を追加し、
+           賃料・管理費・敷金礼金・間取り・専有面積・階数・入居可能日を掲載する。 -->
+      <p><span class="tbd">要確認</span><br>現在の募集状況はお問い合わせください。</p>
+      <a class="btn" href="#contact">空室を問い合わせる</a>
+    </div>
+  </section>
+
+  <section id="facilities">
+    <p class="eyebrow">Facilities</p>
+    <h2>設備・仕様</h2>
+    <p class="measure">大手ポータルの建物ページには設備情報が載りません。実際の設備を書き出すことが、そのままこのページの独自性になります。</p>
+    <div class="cols">
+      <div class="card">
+        <h3>専有部 <span class="tbd">要確認</span></h3>
+        <ul>
+          <li>バス・トイレ別／独立洗面</li>
+          <li>エアコン、給湯方式</li>
+          <li>洗濯機置場（室内／室外）</li>
+          <li>コンロ口数、収納</li>
+          <li>インターネット回線の種別と速度</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>共用部 <span class="tbd">要確認</span></h3>
+        <ul>
+          <li>オートロック、宅配ボックス</li>
+          <li>防犯カメラ、ゴミ置場（24時間可否）</li>
+          <li>駐輪場・バイク置場</li>
+          <li>清掃の頻度と管理体制</li>
+          <li>直近の修繕・リフォーム履歴</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section id="neighborhood">
+    <p class="eyebrow">Neighborhood</p>
+    <h2>周辺環境 ── 高津・溝の口エリア</h2>
+    <p class="measure">高津駅と溝の口駅の中間にあたるエリアで、田園都市線で渋谷方面へ直通しつつ、大型商業施設と南武線の乗り換えを溝の口側で使えるのが特徴です。</p>
+    <div class="cols">
+      <div class="card">
+        <h3>買い物</h3>
+        <ul>
+          <li>イトーヨーカドー 溝ノ口店</li>
+          <li>ドン・キホーテ 溝ノ口駅前店</li>
+          <li>スーパー・コンビニ <span class="tbd">要確認</span></li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>暮らし</h3>
+        <ul>
+          <li>溝の口クリニック（内科・皮膚科）</li>
+          <li>金融機関・郵便局 <span class="tbd">要確認</span></li>
+          <li>学区（小学校・中学校） <span class="tbd">要確認</span></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section id="faq">
+    <p class="eyebrow">FAQ</p>
+    <h2>よくあるご質問</h2>
+
+    <details>
+      <summary>Maison Yoneda はどこにありますか？</summary>
+      <div class="a"><p>神奈川県川崎市高津区溝口5丁目にあります。東急田園都市線 高津駅より徒歩5分です。詳しい地番は内見のご予約時にご案内しています。</p></div>
+    </details>
+
+    <details>
+      <summary>朝霞市や板橋区にある「メゾンヨネダ」と同じ建物ですか？</summary>
+      <div class="a"><p>いいえ、別の建物です。埼玉県朝霞市北原、東京都板橋区前野町にも同名の物件が実在しますが、本ページで扱うのは神奈川県川崎市高津区溝口5丁目の Maison Yoneda です。検索結果で混同されやすいためご注意ください。</p></div>
+    </details>
+
+    <details>
+      <summary>高津駅には東急大井町線も停まりますか？</summary>
+      <div class="a"><p>停まりません。高津駅に停車するのは東急田園都市線のみで、大井町線の列車は通過します。大井町線をご利用の場合は、隣の溝の口駅をご利用ください。</p></div>
+    </details>
+
+    <details>
+      <summary>現在空室はありますか？</summary>
+      <div class="a"><p><span class="tbd">要確認</span> 最新の募集状況は本ページの「空室状況」欄に掲載しています。掲載がない場合もお問い合わせいただければ、今後の退去予定を含めてご案内できる場合があります。</p></div>
+    </details>
+
+    <details>
+      <summary>内見はできますか？</summary>
+      <div class="a"><p><span class="tbd">要確認</span> 内見の可否・受付方法・オンライン内見の対応有無を記載してください。</p></div>
+    </details>
+
+    <details>
+      <summary>ペットの飼育や楽器の演奏はできますか？</summary>
+      <div class="a"><p><span class="tbd">要確認</span> 入居後のトラブルを避けるため、可否を明記することを推奨します。</p></div>
+    </details>
+  </section>
+
+  <section id="contact">
+    <p class="eyebrow">Contact</p>
+    <h2>お問い合わせ</h2>
+    <div class="vacancy">
+      <!-- TODO: 管理会社名・電話番号・受付時間・問い合わせフォームURL を入れる。
+           確定したら RealEstateAgent の JSON-LD を追加する。 -->
+      <p><span class="tbd">要確認</span><br>管理会社名／電話番号／受付時間／お問い合わせフォームのURL</p>
+    </div>
+  </section>
+
+  <footer>
+    <p class="name">Maison Yoneda（メゾンヨネダ）</p>
+    神奈川県川崎市高津区溝口5丁目 ／ 東急田園都市線 高津駅 徒歩5分<br>
+    掲載内容は現況と異なる場合があります。最新の情報はお問い合わせください。
+  </footer>
+
+</div>
+</body>
+</html>

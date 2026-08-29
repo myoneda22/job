@@ -1,6 +1,6 @@
 # 「Maison Yoneda」指名クエリ SEO 分析
 
-対象: 川崎市高津区溝口5 / 東急田園都市線・大井町線 高津駅 徒歩5分の賃貸物件「Maison Yoneda」
+対象: 川崎市高津区溝口5 / 東急田園都市線 高津駅 徒歩5分の賃貸物件「Maison Yoneda」
 起点: Bing 検索 `Maison Yoneda`
 調査日: 2026-08-29
 
