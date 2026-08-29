@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "gemini-link": {
+      "command": "python",
+      "args": ["-m", "gemini_link.mcp_server"],
+      "env": {
+        "PYTHONPATH": "src",
+        "GEMINI_API_KEY": "${GEMINI_API_KEY}",
+        "GEMINI_MODEL": "gemini-3.7-flash"
+      }
+    }
+  }
+}
