@@ -145,6 +145,6 @@ def load_settings(*, dotenv: bool = True) -> Settings:
         gemini_model=os.environ.get("GEMINI_MODEL") or DEFAULT_GEMINI_MODEL,
         anthropic_api_key=os.environ.get("ANTHROPIC_API_KEY") or None,
         anthropic_model=os.environ.get("ANTHROPIC_MODEL") or DEFAULT_ANTHROPIC_MODEL,
-        timeout=_float_env("GEMINI_TIMEOUT", 120.0),
+        timeout=_float_env("GEMINI_TIMEOUT", 180.0),
         max_retries=_int_env("GEMINI_MAX_RETRIES", 4),
     )

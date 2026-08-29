@@ -15,8 +15,9 @@ from .errors import (
     EmptyResponseError,
     GeminiLinkError,
     RateLimitError,
+    RetrievalError,
 )
-from .gemini import FunctionCall, GeminiClient, GeminiResponse, Source
+from .gemini import FunctionCall, GeminiClient, GeminiResponse, RetrievedUrl, Source
 
 __version__ = "0.1.0"
 
@@ -29,6 +30,8 @@ __all__ = [
     "GeminiLinkError",
     "GeminiResponse",
     "RateLimitError",
+    "RetrievalError",
+    "RetrievedUrl",
     "Settings",
     "Source",
     "load_dotenv",

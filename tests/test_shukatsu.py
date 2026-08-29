@@ -173,3 +173,78 @@ def test_research_many_can_raise_instead_of_collecting(settings, transport):
     transport.queue_json(text_response("not json"))
     with pytest.raises(GeminiLinkError):
         research_many(["B社"], client=client, on_error="raise")
+
+
+# ------------------------------------------------- URL-based research path
+
+from conftest import url_context_response  # noqa: E402
+from gemini_link.errors import RetrievalError  # noqa: E402
+from gemini_link.shukatsu import research_company_from_urls  # noqa: E402
+
+URLS = ["https://a.example.com/recruit", "https://a.example.com/news"]
+
+
+def test_url_research_reads_the_pages_then_structures_them(client, transport):
+    transport.queue_json(url_context_response(
+        "ページの内容", [(u, "URL_RETRIEVAL_STATUS_SUCCESS") for u in URLS]))
+    transport.queue_json(text_response(json.dumps(FINDINGS, ensure_ascii=False)))
+
+    result = research_company_from_urls("A社", URLS, grad_year=2028,
+                                        client=client, today=TODAY)
+
+    first, second = transport.requests
+    assert first["body"]["tools"] == [{"url_context": {}}]
+    assert "google_search" not in json.dumps(first["body"])
+    for url in URLS:
+        assert url in first["body"]["contents"][0]["parts"][0]["text"]
+    # The structuring call sees only what was read off the pages.
+    assert "tools" not in second["body"]
+    assert "ページの内容" in second["body"]["contents"][0]["parts"][0]["text"]
+
+    assert [s.uri for s in result.sources] == URLS
+    assert result.confidence == "high"
+    assert "・採用状況: 28卒の本選考エントリーを受付中" in result.to_remarks()
+
+
+def test_url_research_refuses_when_a_page_could_not_be_read(client, transport):
+    # This is the whole point: the model still returns fluent text, so only the
+    # retrieval status stops an ungrounded answer being recorded as research.
+    transport.queue_json(url_context_response("それらしい採用情報", [
+        (URLS[0], "URL_RETRIEVAL_STATUS_SUCCESS"),
+        (URLS[1], "URL_RETRIEVAL_STATUS_ERROR"),
+    ]))
+    with pytest.raises(RetrievalError) as excinfo:
+        research_company_from_urls("A社", URLS, client=client, today=TODAY)
+    assert URLS[1] in str(excinfo.value)
+    # It must not have gone on to structure and store the ungrounded answer.
+    assert len(transport.requests) == 1
+
+
+def test_url_research_refuses_when_no_retrieval_was_reported(client, transport):
+    transport.queue_json(text_response("記憶から答えた内容"))
+    with pytest.raises(RetrievalError, match="not grounded"):
+        research_company_from_urls("A社", URLS, client=client, today=TODAY)
+    assert len(transport.requests) == 1
+
+
+def test_url_research_requires_at_least_one_url(client, transport):
+    with pytest.raises(ValueError, match="at least one URL"):
+        research_company_from_urls("A社", [], client=client)
+    assert transport.requests == []
+
+
+def test_url_research_rejects_an_empty_company_name(client, transport):
+    with pytest.raises(ValueError, match="must not be empty"):
+        research_company_from_urls("  ", URLS, client=client)
+    assert transport.requests == []
+
+
+def test_url_research_only_cites_pages_it_actually_read(client, transport):
+    # A page that failed cannot appear as a source; here all succeed but a
+    # third URL the model volunteered is not in the request, so is not cited.
+    transport.queue_json(url_context_response(
+        "ページの内容", [(URLS[0], "URL_RETRIEVAL_STATUS_SUCCESS")]))
+    transport.queue_json(text_response(json.dumps(FINDINGS, ensure_ascii=False)))
+    result = research_company_from_urls("A社", [URLS[0]], client=client, today=TODAY)
+    assert [s.uri for s in result.sources] == [URLS[0]]
+    assert URLS[0] in result.to_remarks()

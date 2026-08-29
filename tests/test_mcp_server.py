@@ -41,6 +41,8 @@ def test_every_tool_is_registered():
         "gemini_search",
         "gemini_second_opinion",
         "gemini_research_company",
+        "gemini_read_urls",
+        "gemini_research_company_from_urls",
         "gemini_list_models",
         "gemini_status",
     }
@@ -118,3 +120,47 @@ def test_a_client_error_propagates_rather_than_being_swallowed(served):
     served.queue_error(400, "Request contains an invalid argument.")
     with pytest.raises(Exception, match="invalid argument"):
         run(mcp_server.gemini_generate("q"))
+
+
+# ----------------------------------------------------- URL-grounded tools
+
+from conftest import url_context_response  # noqa: E402
+
+
+def test_read_urls_tool_is_registered_with_the_others():
+    names = {t.name for t in run(mcp_server.server.list_tools())}
+    assert "gemini_read_urls" in names
+    assert "gemini_research_company_from_urls" in names
+
+
+def test_read_urls_returns_the_answer_and_the_pages(served):
+    served.queue_json(url_context_response(
+        "ページの要約", [("https://a.example.com", "URL_RETRIEVAL_STATUS_SUCCESS")]))
+    out = run(mcp_server.gemini_read_urls(["https://a.example.com"], "何が書いてある？"))
+    assert "ページの要約" in out
+    assert "実際に読んだページ" in out
+    assert served.last_body["tools"] == [{"url_context": {}}]
+
+
+def test_read_urls_flags_an_answer_that_was_not_actually_fetched(served):
+    served.queue_json(url_context_response(
+        "それらしい答え", [("https://a.example.com", "URL_RETRIEVAL_STATUS_ERROR")]))
+    out = run(mcp_server.gemini_read_urls(["https://a.example.com"], "q"))
+    assert "信頼できません" in out
+    assert "記憶で補った" in out
+    assert "https://a.example.com" in out
+
+
+def test_read_urls_rejects_an_empty_url_list(served):
+    assert "URLを1つ以上" in run(mcp_server.gemini_read_urls([], "q"))
+
+
+def test_research_from_urls_returns_note_and_json(served):
+    served.queue_json(url_context_response(
+        "ページ内容", [("https://a.example.com/recruit", "URL_RETRIEVAL_STATUS_SUCCESS")]))
+    served.queue_json(text_response('{"recruiting_status": "受付中", "confidence": "high"}'))
+    out = run(mcp_server.gemini_research_company_from_urls(
+        "A社", ["https://a.example.com/recruit"], grad_year=2028))
+    assert "備考欄用テキスト" in out
+    payload = json.loads(out.split("── 構造化データ ──\n", 1)[1])
+    assert payload["sources"][0]["uri"] == "https://a.example.com/recruit"

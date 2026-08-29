@@ -133,3 +133,58 @@ def test_compare_exit_code_signals_a_conflict(fake_cli, capsys, monkeypatch, set
 
     assert cli.main(["compare", "締切は？"]) == 1
     assert "❌" in capsys.readouterr().out
+
+
+# ----------------------------------------------------- URL-grounded commands
+
+from conftest import url_context_response  # noqa: E402
+
+
+def test_read_urls_prints_the_pages_it_read(fake_cli, capsys):
+    fake_cli.queue_json(url_context_response(
+        "ページの要約", [("https://a.example.com", "URL_RETRIEVAL_STATUS_SUCCESS")]))
+    assert cli.main(["read-urls", "何が書いてある？", "--url", "https://a.example.com"]) == 0
+    out = capsys.readouterr().out
+    assert "ページの要約" in out
+    assert "実際に読んだページ" in out
+    assert fake_cli.last_body["tools"] == [{"url_context": {}}]
+
+
+def test_read_urls_warns_and_exits_nonzero_when_a_fetch_failed(fake_cli, capsys):
+    fake_cli.queue_json(url_context_response(
+        "それらしい答え", [("https://a.example.com", "URL_RETRIEVAL_STATUS_ERROR")]))
+    assert cli.main(["read-urls", "q", "--url", "https://a.example.com"]) == 1
+    captured = capsys.readouterr()
+    assert "信頼できません" in captured.err
+    assert "https://a.example.com" in captured.err
+
+
+def test_read_urls_exits_nonzero_when_nothing_was_retrieved(fake_cli, capsys):
+    fake_cli.queue_json(text_response("記憶からの答え"))
+    assert cli.main(["read-urls", "q", "--url", "https://a.example.com"]) == 1
+
+
+def test_read_urls_json_reports_the_grounded_flag(fake_cli, capsys):
+    fake_cli.queue_json(url_context_response(
+        "要約", [("https://a.example.com", "URL_RETRIEVAL_STATUS_SUCCESS")]))
+    cli.main(["read-urls", "q", "--url", "https://a.example.com", "--json"])
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["grounded"] is True
+    assert payload["retrieved"][0]["ok"] is True
+
+
+def test_company_with_url_uses_the_page_reading_path(fake_cli, capsys):
+    fake_cli.queue_json(url_context_response(
+        "ページ内容", [("https://a.example.com/recruit", "URL_RETRIEVAL_STATUS_SUCCESS")]))
+    fake_cli.queue_json(text_response('{"recruiting_status": "受付中", "confidence": "high"}'))
+    assert cli.main(["company", "A社", "--url", "https://a.example.com/recruit"]) == 0
+    out = capsys.readouterr().out
+    assert "・採用状況: 受付中" in out
+    assert fake_cli.requests[0]["body"]["tools"] == [{"url_context": {}}]
+
+
+def test_company_without_url_still_searches(fake_cli, capsys):
+    fake_cli.queue_json(text_response("調査本文"))
+    fake_cli.queue_json(text_response('{"recruiting_status": "受付中", "confidence": "high"}'))
+    cli.main(["company", "A社"])
+    assert fake_cli.requests[0]["body"]["tools"] == [{"google_search": {}}]

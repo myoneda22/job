@@ -122,3 +122,22 @@ def function_call_response(name: str, args: dict[str, Any] | None = None) -> dic
         ],
         "modelVersion": "gemini-3.7-flash",
     }
+
+
+def url_context_response(
+    text: str, urls: list[tuple[str, str]] | None = None, **extra: Any
+) -> dict[str, Any]:
+    """A generateContent response carrying urlContextMetadata.
+
+    ``urls`` is a list of ``(url, status)``; pass the real status strings, e.g.
+    ``URL_RETRIEVAL_STATUS_SUCCESS`` or ``URL_RETRIEVAL_STATUS_ERROR``.
+    """
+    payload = text_response(text)
+    if urls is not None:
+        payload["candidates"][0]["urlContextMetadata"] = {
+            "urlMetadata": [
+                {"retrievedUrl": u, "urlRetrievalStatus": s} for u, s in urls
+            ]
+        }
+    payload.update(extra)
+    return payload

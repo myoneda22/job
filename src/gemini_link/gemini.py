@@ -22,7 +22,7 @@ from dataclasses import dataclass, field
 from typing import Any, Callable, Iterator, Sequence
 
 from .config import Settings, load_settings
-from .errors import ApiError, EmptyResponseError, RateLimitError
+from .errors import ApiError, EmptyResponseError, RateLimitError, RetrievalError
 
 API_ROOT = "https://generativelanguage.googleapis.com/v1beta"
 
@@ -30,6 +30,23 @@ API_ROOT = "https://generativelanguage.googleapis.com/v1beta"
 # the 2.5 family takes an integer thinkingBudget instead.  Passing the wrong one
 # is a 400, so the client picks by model family unless told explicitly.
 _THINKING_LEVEL_FAMILIES = ("gemini-3",)
+
+
+# Anything that is not exactly this counts as a failed fetch. Fail closed:
+# an unrecognised status must never be mistaken for a successful retrieval.
+URL_RETRIEVAL_SUCCESS = "URL_RETRIEVAL_STATUS_SUCCESS"
+
+
+@dataclass
+class RetrievedUrl:
+    """One URL a ``url_context`` call tried to fetch, and how that went."""
+
+    url: str
+    status: str
+
+    @property
+    def ok(self) -> bool:
+        return self.status == URL_RETRIEVAL_SUCCESS
 
 
 @dataclass
@@ -59,8 +76,36 @@ class GeminiResponse:
     function_calls: list[FunctionCall] = field(default_factory=list)
     sources: list[Source] = field(default_factory=list)
     search_queries: list[str] = field(default_factory=list)
+    retrieved_urls: list[RetrievedUrl] = field(default_factory=list)
     usage: dict[str, Any] = field(default_factory=dict)
     raw: dict[str, Any] = field(default_factory=dict)
+
+    @property
+    def retrieval_failures(self) -> list[RetrievedUrl]:
+        return [u for u in self.retrieved_urls if not u.ok]
+
+    def require_retrieval(self) -> "GeminiResponse":
+        """Raise unless every requested URL was actually fetched.
+
+        Call this before believing a ``url_context`` answer. Observed
+        behaviour: with a failed fetch the model still answers, from memory,
+        with no hedging — so the retrieval status is the only reliable signal
+        that the text is grounded in the page rather than in the weights.
+        """
+        failures = self.retrieval_failures
+        if failures:
+            raise RetrievalError(
+                "the model answered without fetching "
+                + ", ".join(f"{u.url} ({u.status})" for u in failures)
+                + " — treat the answer as ungrounded and discard it",
+                failures=[(u.url, u.status) for u in failures],
+            )
+        if not self.retrieved_urls:
+            raise RetrievalError(
+                "no URL retrieval was reported at all — the url_context tool "
+                "was not used, so the answer is not grounded in any page"
+            )
+        return self
 
     def json(self) -> Any:
         """Decode ``text`` as JSON, tolerating a ```` ```json ```` fence."""
@@ -73,6 +118,15 @@ class GeminiResponse:
             if body.startswith("json"):
                 body = body[4:].strip()
         return json.loads(body)
+
+
+def _network_failure(exc: BaseException) -> tuple[int, dict[str, str], bytes]:
+    """Render a transport-level failure as a retryable synthetic response."""
+    reason = getattr(exc, "reason", None) or exc
+    body = json.dumps(
+        {"error": {"message": f"network error: {type(exc).__name__}: {reason}"}}
+    ).encode("utf-8")
+    return 504, {}, body
 
 
 class Transport:
@@ -98,6 +152,12 @@ class Transport:
         except urllib.error.HTTPError as exc:
             detail = exc.read()
             return exc.code, dict(exc.headers or {}), detail
+        except (urllib.error.URLError, OSError) as exc:
+            # A read timeout, reset, or DNS failure. Report it as a retryable
+            # status so it flows through the same backoff loop as a 503 rather
+            # than escaping as a raw socket traceback. url_context calls have
+            # been measured at well over a minute, so this is a normal event.
+            return _network_failure(exc)
         headers_out = dict(resp.headers or {})
         if stream:
             return resp.status, headers_out, resp
@@ -111,6 +171,9 @@ class Transport:
                 return resp.status, resp.read()
         except urllib.error.HTTPError as exc:
             return exc.code, exc.read()
+        except (urllib.error.URLError, OSError) as exc:
+            status, _headers, payload = _network_failure(exc)
+            return status, payload
 
 
 class GeminiClient:
@@ -156,6 +219,7 @@ class GeminiClient:
         max_output_tokens: int | None = None,
         tools: list[dict[str, Any]] | None = None,
         google_search: bool = False,
+        url_context: bool = False,
         response_schema: dict[str, Any] | None = None,
         json_output: bool = False,
         thinking_level: str | None = None,
@@ -179,6 +243,8 @@ class GeminiClient:
         all_tools: list[dict[str, Any]] = list(tools or [])
         if google_search:
             all_tools.append({"google_search": {}})
+        if url_context:
+            all_tools.append({"url_context": {}})
         if all_tools:
             payload["tools"] = all_tools
 
@@ -396,6 +462,12 @@ class GeminiClient:
                 _empty_hint(finish, usage), finish_reason=finish, usage=usage
             )
 
+        url_meta = candidate.get("urlContextMetadata", {}) or {}
+        retrieved = [
+            RetrievedUrl(url=m.get("retrievedUrl", ""), status=m.get("urlRetrievalStatus", ""))
+            for m in url_meta.get("urlMetadata", []) or []
+        ]
+
         grounding = candidate.get("groundingMetadata", {}) or {}
         sources = []
         for chunk in grounding.get("groundingChunks", []) or []:
@@ -409,6 +481,7 @@ class GeminiClient:
             function_calls=calls,
             sources=sources,
             search_queries=list(grounding.get("webSearchQueries") or []),
+            retrieved_urls=retrieved,
             usage=usage,
             raw=data,
         )

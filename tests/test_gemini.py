@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import json
+
 import pytest
 
-from conftest import function_call_response, text_response
-from gemini_link.errors import ApiError, EmptyResponseError, RateLimitError
+from conftest import function_call_response, text_response, url_context_response
+from gemini_link.errors import ApiError, EmptyResponseError, RateLimitError, RetrievalError
 from gemini_link.gemini import GeminiClient
 
 
@@ -345,3 +347,129 @@ def test_a_grounded_400_is_not_rewritten(settings, transport):
     with pytest.raises(ApiError) as excinfo:
         c.generate("q", google_search=True)
     assert "Google Search grounding" not in str(excinfo.value)
+
+
+# ------------------------------------------------------------- url_context
+
+def test_url_context_is_sent_as_a_tool(client, transport):
+    transport.queue_json(text_response("ok"))
+    client.generate("https://ex.com を読んで", url_context=True)
+    assert transport.last_body["tools"] == [{"url_context": {}}]
+
+
+def test_url_context_can_accompany_a_response_schema(client, transport):
+    # Unlike google_search, url_context is not refused alongside structured
+    # output — only the search-grounding combination is rejected.
+    transport.queue_json(text_response('{"a": 1}'))
+    payload = client.build_payload("q", url_context=True, json_output=True)
+    assert payload["tools"] == [{"url_context": {}}]
+    assert payload["generationConfig"]["responseMimeType"] == "application/json"
+
+
+def test_retrieval_status_is_parsed(client, transport):
+    transport.queue_json(url_context_response("読みました", [
+        ("https://a.example.com", "URL_RETRIEVAL_STATUS_SUCCESS"),
+        ("https://b.example.com", "URL_RETRIEVAL_STATUS_ERROR"),
+    ]))
+    resp = client.generate("q", url_context=True)
+    assert [(u.url, u.ok) for u in resp.retrieved_urls] == [
+        ("https://a.example.com", True),
+        ("https://b.example.com", False),
+    ]
+    assert [u.url for u in resp.retrieval_failures] == ["https://b.example.com"]
+
+
+def test_an_unknown_status_counts_as_a_failure(client, transport):
+    # Fail closed: a status string we have never seen must not be read as success.
+    transport.queue_json(url_context_response("答え", [
+        ("https://a.example.com", "URL_RETRIEVAL_STATUS_SOMETHING_NEW"),
+    ]))
+    resp = client.generate("q", url_context=True)
+    assert resp.retrieved_urls[0].ok is False
+    with pytest.raises(RetrievalError):
+        resp.require_retrieval()
+
+
+def test_require_retrieval_passes_when_every_page_was_read(client, transport):
+    transport.queue_json(url_context_response("読みました", [
+        ("https://a.example.com", "URL_RETRIEVAL_STATUS_SUCCESS"),
+    ]))
+    resp = client.generate("q", url_context=True).require_retrieval()
+    assert resp.text == "読みました"
+
+
+def test_require_retrieval_names_the_pages_it_could_not_read(client, transport):
+    transport.queue_json(url_context_response("それらしい答え", [
+        ("https://a.example.com", "URL_RETRIEVAL_STATUS_SUCCESS"),
+        ("https://b.example.com", "URL_RETRIEVAL_STATUS_ERROR"),
+    ]))
+    resp = client.generate("q", url_context=True)
+    with pytest.raises(RetrievalError) as excinfo:
+        resp.require_retrieval()
+    assert "https://b.example.com" in str(excinfo.value)
+    assert "https://a.example.com" not in str(excinfo.value)  # that one was fine
+    assert "ungrounded" in str(excinfo.value)
+    assert excinfo.value.failures == [("https://b.example.com", "URL_RETRIEVAL_STATUS_ERROR")]
+
+
+def test_require_retrieval_rejects_an_answer_with_no_retrieval_at_all(client, transport):
+    # The observed hallucination case: a fluent answer, no retrieval reported.
+    transport.queue_json(text_response("自信ありげな答え"))
+    resp = client.generate("q", url_context=True)
+    assert resp.text == "自信ありげな答え"
+    with pytest.raises(RetrievalError, match="not grounded"):
+        resp.require_retrieval()
+
+
+def test_an_ordinary_response_reports_no_retrieved_urls(client, transport):
+    transport.queue_json(text_response("答え"))
+    assert client.generate("q").retrieved_urls == []
+
+
+# ------------------------------------------------------ transport failures
+
+def test_a_socket_timeout_becomes_a_retryable_status_not_a_traceback(settings):
+    """A read timeout must not escape as a raw socket error."""
+    import urllib.error
+    from gemini_link.gemini import Transport
+
+    class TimingOutTransport(Transport):
+        def __init__(self):
+            self.calls = 0
+
+        def request(self, url, *, headers, body, timeout, stream=False):
+            self.calls += 1
+            if self.calls == 1:
+                return self._fail()
+            return 200, {}, json.dumps(text_response("recovered")).encode()
+
+        def _fail(self):
+            from gemini_link.gemini import _network_failure
+            return _network_failure(TimeoutError("The read operation timed out"))
+
+    transport = TimingOutTransport()
+    c = GeminiClient(settings=settings, transport=transport, sleep=lambda _: None)
+    assert c.generate("q").text == "recovered"
+    assert transport.calls == 2
+
+
+def test_a_persistent_network_failure_raises_a_clean_api_error(settings):
+    from gemini_link.gemini import Transport, _network_failure
+
+    class DeadTransport(Transport):
+        def request(self, url, *, headers, body, timeout, stream=False):
+            return _network_failure(TimeoutError("The read operation timed out"))
+
+    c = GeminiClient(settings=settings, transport=DeadTransport(), sleep=lambda _: None)
+    with pytest.raises(ApiError) as excinfo:
+        c.generate("q")
+    assert excinfo.value.status == 504
+    assert excinfo.value.retryable is True
+    assert "TimeoutError" in str(excinfo.value)
+
+
+def test_network_failure_helper_shapes_a_json_error_body(settings):
+    from gemini_link.gemini import _network_failure
+    status, headers, body = _network_failure(OSError("connection reset"))
+    assert status == 504
+    assert "connection reset" in json.loads(body)["error"]["message"]

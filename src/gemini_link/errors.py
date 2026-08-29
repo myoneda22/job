@@ -34,6 +34,20 @@ class RateLimitError(ApiError):
     """429 from the provider — quota or requests-per-minute exhausted."""
 
 
+class RetrievalError(GeminiLinkError):
+    """A ``url_context`` call answered without actually fetching the pages.
+
+    This is the dangerous case, not a cosmetic one: when retrieval fails the
+    model will happily answer from its own memory in a tone indistinguishable
+    from a grounded answer. Anything built on cited sources has to refuse that
+    answer rather than record it, so the failed URLs travel with the error.
+    """
+
+    def __init__(self, message: str, failures: list[tuple[str, str]] | None = None):
+        super().__init__(message)
+        self.failures = failures or []
+
+
 class EmptyResponseError(GeminiLinkError):
     """The call succeeded but produced no usable text.
 

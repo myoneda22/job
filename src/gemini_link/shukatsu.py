@@ -35,6 +35,17 @@ _RESEARCH_SYSTEM = """\
 - 日付・締切・金額は、出典に書かれている表現をそのまま引くこと。
 - 情報がいつ時点のものかを明記すること。"""
 
+_URL_RESEARCH_SYSTEM = """\
+あなたは日本の新卒採用に詳しいリサーチャーです。指定されたURLのページを実際に読み、
+そこに書かれている内容『だけ』を使って答えてください。
+
+厳守事項:
+- ページを取得できなかった場合、記憶や一般知識で補ってはいけません。
+  その場合は「ページを取得できませんでした」とだけ述べ、内容を推測しないこと。
+- ページに書かれていない項目は「不明」と明記すること。
+- 日付・締切・金額は、ページの表現をそのまま引くこと。
+- どの情報がどのURLに書かれていたかを明示すること。"""
+
 _STRUCTURE_SYSTEM = """\
 渡されたリサーチ結果を、指定のJSONスキーマに変換してください。
 渡されたテキストに書かれていない情報を足してはいけません。
@@ -230,3 +241,88 @@ def research_many(
 
 def research_json(company: str, **kwargs: Any) -> str:
     return json.dumps(research_company(company, **kwargs).to_dict(), ensure_ascii=False, indent=2)
+
+
+def research_company_from_urls(
+    company: str,
+    urls: list[str],
+    *,
+    grad_year: int = 2028,
+    client: GeminiClient | None = None,
+    settings: Settings | None = None,
+    today: _dt.date | None = None,
+) -> CompanyResearch:
+    """Research a company by reading specific pages, instead of by searching.
+
+    The alternative to :func:`research_company` when Google Search grounding is
+    unavailable — its quota is metered separately and runs out first on the free
+    tier, while ``url_context`` keeps working.  Caller supplies the URLs (the
+    company's own recruit page, a press release), and Gemini reads them.
+
+    Refuses to return anything unless every URL was actually fetched.  That
+    check is the whole point: a failed fetch does not produce an error or a
+    hedge from the model, it produces a fluent answer drawn from training data
+    that is indistinguishable from a grounded one.  Recording that as sourced
+    research is how a wrong application deadline ends up in the table.
+    """
+    if not company.strip():
+        raise ValueError("company must not be empty")
+    if not urls:
+        raise ValueError("pass at least one URL to read")
+
+    settings = settings or load_settings()
+    gemini = client or GeminiClient(settings=settings)
+    today = today or _dt.date.today()
+    short_year = grad_year % 100
+
+    listed = "\n".join(urls)
+    query = (
+        f"以下のページを読んで、{company} の {grad_year}年卒（{short_year}卒）新卒採用について"
+        f"分かることをまとめてください。今日は{today.isoformat()}です。\n\n{listed}\n\n"
+        f"知りたいこと: 採用実施の有無と受付状況 / エントリー時期と締切 / 選考フロー / "
+        f"インターン / 英語要件・帰国子女枠 / 初任給・待遇 / 直近の動き\n"
+    )
+
+    read = gemini.generate(
+        query,
+        system=_URL_RESEARCH_SYSTEM,
+        url_context=True,
+        temperature=0,
+        max_output_tokens=8192,
+        thinking_level="low",
+    ).require_retrieval()
+
+    structured = gemini.generate(
+        f"# 対象企業\n{company}（{grad_year}年卒）\n\n# ページから読み取った内容\n{read.text}",
+        system=_STRUCTURE_SYSTEM,
+        response_schema=_SCHEMA,
+        temperature=0,
+        max_output_tokens=4096,
+        thinking_level="low",
+    )
+
+    try:
+        parsed = structured.json()
+    except ValueError as exc:
+        raise GeminiLinkError(
+            f"could not parse the structured research result for {company!r}: {exc}"
+        ) from exc
+    if not isinstance(parsed, dict):
+        raise GeminiLinkError(f"expected a JSON object for {company!r}, got {type(parsed).__name__}")
+
+    fields = {key: str(parsed.get(key) or UNKNOWN).strip() for key, _ in _LABELS}
+    confidence = str(parsed.get("confidence") or "low")
+    if not gemini_found_anything(fields):
+        confidence = "low"
+
+    return CompanyResearch(
+        company=company,
+        grad_year=grad_year,
+        fields=fields,
+        confidence=confidence,
+        sources=[Source(title=u.url, uri=u.url) for u in read.retrieved_urls if u.ok],
+        search_queries=[],
+        notes=read.text,
+        researched_on=today.isoformat(),
+        model=read.model,
+    )

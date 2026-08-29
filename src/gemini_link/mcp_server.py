@@ -16,7 +16,7 @@ from typing import Any
 
 from .config import load_settings, redact
 from .gemini import GeminiClient
-from .shukatsu import research_company
+from .shukatsu import research_company, research_company_from_urls
 
 _MISSING_SDK = (
     "The MCP SDK is not installed. Install it with:  pip install 'mcp>=2'  "
@@ -162,6 +162,75 @@ async def gemini_second_opinion(
 async def gemini_research_company(company: str, grad_year: int = 2028) -> str:
     def run() -> str:
         result = research_company(company, grad_year=grad_year, client=get_client())
+        return (
+            "── 備考欄用テキスト ──\n"
+            f"{result.to_remarks()}\n\n"
+            "── 構造化データ ──\n"
+            f"{json.dumps(result.to_dict(), ensure_ascii=False, indent=2)}"
+        )
+
+    return await asyncio.to_thread(run)
+
+
+@server.tool(
+    description=(
+        "Have Gemini fetch and read specific web pages, then answer a question "
+        "using only what those pages say. Use instead of gemini_search when you "
+        "already know which pages matter, or when search grounding is "
+        "unavailable. Fails loudly rather than answering from memory if a page "
+        "cannot be fetched — so a successful reply is genuinely page-grounded."
+    )
+)
+async def gemini_read_urls(urls: list[str], question: str) -> str:
+    if not urls:
+        return "エラー: URLを1つ以上指定してください。"
+
+    listed = "\n".join(urls)
+    system = (
+        "指定されたURLのページを実際に読み、そこに書かれている内容だけを使って答えてください。"
+        "ページを取得できなかった場合、記憶や一般知識で補ってはいけません。"
+        "ページに書かれていない項目は「不明」と明記してください。"
+    )
+
+    def run() -> str:
+        resp = get_client().generate(
+            f"{listed}\n\n{question}",
+            system=system,
+            url_context=True,
+            temperature=0,
+            max_output_tokens=8192,
+            thinking_level="low",
+        )
+        failures = resp.retrieval_failures
+        if failures:
+            listed_failures = "\n".join(f"- {u.url} ({u.status})" for u in failures)
+            return (
+                "取得できなかったページがあるため、この回答は信頼できません。\n"
+                "（取得失敗時、モデルは記憶で補った回答を返すことがあります）\n\n"
+                f"取得失敗:\n{listed_failures}\n\n"
+                f"参考（信頼しないでください）:\n{resp.text}"
+            )
+        read = "\n".join(f"- {u.url}" for u in resp.retrieved_urls)
+        return f"{resp.text}\n\n── 実際に読んだページ ──\n{read}"
+
+    return await asyncio.to_thread(run)
+
+
+@server.tool(
+    description=(
+        "Research a company's new-graduate hiring by reading specific pages you "
+        "supply (its recruit page, a press release) rather than by searching. "
+        "Use when gemini_research_company is blocked by the search-grounding "
+        "quota. Refuses to return findings unless every page was actually read."
+    )
+)
+async def gemini_research_company_from_urls(
+    company: str, urls: list[str], grad_year: int = 2028
+) -> str:
+    def run() -> str:
+        result = research_company_from_urls(
+            company, urls, grad_year=grad_year, client=get_client()
+        )
         return (
             "── 備考欄用テキスト ──\n"
             f"{result.to_remarks()}\n\n"

@@ -6,7 +6,7 @@
 | 機能 | モジュール | 用途 |
 | --- | --- | --- |
 | 汎用 Gemini クライアント | `gemini_link.gemini` | 生成・ストリーミング・function calling・検索グラウンディング・JSON スキーマ出力・リトライ |
-| 就活リサーチ | `gemini_link.shukatsu` | 企業の新卒採用を検索付きで調査し、Airtable の「備考」欄用テキストに整形 |
+| 就活リサーチ | `gemini_link.shukatsu` | 企業の新卒採用を調査し、Airtable の「備考」欄用テキストに整形（検索経由／URL指定の2通り） |
 | Claude ↔ Gemini 相互チェック | `gemini_link.compare` | 同じ質問を両モデルに投げ、食い違いを検出 |
 | MCP サーバー | `gemini_link.mcp_server` | Claude Code から Gemini をツールとして呼ぶ |
 
@@ -34,8 +34,10 @@ python -m gemini_link.cli status                      # 設定確認（キーは
 python -m gemini_link.cli models                      # このキーで見えるモデル一覧
 python -m gemini_link.cli ask "質問" [--stream]        # 単発生成
 python -m gemini_link.cli search "28卒 締切"           # 検索グラウンディング付き回答（出典URL付き）
+python -m gemini_link.cli read-urls "何が書いてある？" --url https://...  # 指定ページだけを読ませる
 python -m gemini_link.cli compare "質問" [--search]    # Claude と突き合わせ
 python -m gemini_link.cli company "サイバーエージェント" --grad-year 2028
+python -m gemini_link.cli company "A社" --url https://a.co.jp/recruit/   # 検索せずページを読む
 python -m gemini_link.cli batch companies.txt --json  # 複数社を一括
 ```
 
@@ -63,6 +65,30 @@ JSON スキーマ出力はサーバー側で排他のため、1回目で出典�
 
 「不明」の項目は行ごと省かれます。全項目が不明なら確度は `low` に落とされ、
 モデルの自己申告より優先されます（要手動確認と明記）。
+
+### 検索が使えないときの経路（`--url`）
+
+検索グラウンディングのクォータは別枠で、無料枠では先に尽きます（下記「モデル選択」参照）。
+その場合は `--url` で読ませたいページを直接指定できます。`url_context` ツールを使う経路で、
+**こちらは検索クォータの影響を受けません**（実測で 429 にならないことを確認済み）。
+
+```bash
+python -m gemini_link.cli company "A社" \
+  --url https://a.co.jp/recruit/ --url https://a.co.jp/news/2026/
+```
+
+**この経路には必ず踏むべき安全確認があります。** ページ取得に失敗しても Gemini は
+エラーを返さず、学習データの記憶から流暢な回答を作ります。グラウンディングされた回答と
+見分けがつきません（実測で確認: 取得失敗した `example.com` の内容を、自信ありげに要約しました）。
+
+そのため、取得ステータス（`urlRetrievalStatus`）が全URLで成功でない限り、
+`research_company_from_urls()` は結果を返さず `RetrievalError` を投げます。
+`GeminiResponse.require_retrieval()` が同じ判定を行い、未知のステータス文字列は
+成功と見なしません（fail-closed）。CLI は警告を stderr に出して終了コード 1 を返します。
+
+裏を返すと、明示的に「取得できなければ記憶で補うな」と指示すれば正直に申告します
+（実測で確認済み）。各プロンプトにその指示を入れてありますが、それは補助であって、
+信頼の根拠はあくまで取得ステータスの検証です。
 
 このモジュールは Airtable への書き込みは行いません。整形済みテキストと JSON を返すだけなので、
 書き込みは既存の Airtable MCP / スキル側の責務です。
@@ -95,7 +121,9 @@ cp .mcp.json.example .mcp.json
 - `gemini_generate` — 素の生成
 - `gemini_search` — Google 検索グラウンディング付き回答（出典URL付き）
 - `gemini_second_opinion` — Claude の回答案を Gemini が独立にレビュー
-- `gemini_research_company` — 就活リサーチ（備考テキスト＋構造化JSON）
+- `gemini_research_company` — 就活リサーチ（検索経由。備考テキスト＋構造化JSON）
+- `gemini_read_urls` — 指定ページだけを読ませて回答（取得失敗時は警告を返す）
+- `gemini_research_company_from_urls` — 就活リサーチ（URL指定。検索クォータ不要）
 - `gemini_list_models` / `gemini_status`
 
 各ツールはブロッキング HTTP をワーカースレッドに退避するので、
@@ -114,6 +142,10 @@ Gemini の応答待ちで MCP のイベントループが止まりません。
 2. **検索グラウンディングのクォータは通常の生成とは別枠です。** 無料枠ではこちらが
    先に尽き、素の生成は成功するのにグラウンディング付きだけ 429 になります。
    この場合エラーメッセージがその旨を明示します。
+3. **`url_context` は検索クォータの影響を受けません。** 同じキーで、`google_search` が
+   429 を返す状況でも `url_context` は 200 を返します。検索が使えないときの代替経路として
+   `--url` を用意しているのはこのためです。ただし取得成功は別問題で、上記の
+   「検索が使えないときの経路」の安全確認が必須です。
 
 ## Thinking の扱い
 
@@ -125,23 +157,41 @@ thinking が出力予算を食い尽くして本文が空になる事故は起�
 その場合は「思考トークンに何トークン使ったか」と対処法（`max_output_tokens` を上げる／
 `thinking_level='low'`）を含む例外を投げます。
 
+## ネットワーク障害の扱い
+
+読み取りタイムアウトや接続リセットは、生の socket 例外として素通しせず、
+リトライ対象のステータス（504）に変換して通常のバックオフ経路に載せます。
+`url_context` の呼び出しは実測で 50〜140 秒かかるため、これは例外ではなく通常の事象です。
+既定のタイムアウトはそれに合わせて 180 秒にしてあります（`GEMINI_TIMEOUT` で変更可）。
+
 ## テスト
 
 ```bash
 pytest
 ```
 
-93件、すべてネットワーク不要です。`FakeTransport` が HTTP 層を差し替えるので、
+122件、すべてネットワーク不要です。`FakeTransport` が HTTP 層を差し替えるので、
 リクエスト組み立て・リトライ・パースの実処理をキーなしで検証します。
 MCP SDK が未導入の環境では MCP のテストのみスキップされます。
 
 ## 検証状況
 
-実際の API に対して確認済み: `status` / `models` / `ask` / `ask --stream` /
-JSON スキーマ出力（`company` の2回目の呼び出し）。
+実際の API に対して確認済み:
 
-**未検証**: 検索グラウンディングを使う経路（`search`、`company` の1回目、
-`gemini_search`、`gemini_research_company`）。グラウンディング専用クォータが
-尽きており 429 になるためで、コード側の問題ではありません
-（素の生成は同じモデル・同じキーで成功します）。クォータが回復するか
-課金を有効にすれば動作するはずですが、実測はできていません。
+- `status` / `models` / `ask` / `ask --stream`
+- JSON スキーマ出力（`company` の2回目の呼び出し）
+- `url_context` が検索クォータの影響を受けないこと（429 にならない）
+- 取得失敗時に Gemini が記憶から回答してしまうこと、および明示指示があれば正直に
+  申告すること（この挙動が `require_retrieval()` の設計根拠です）
+- タイムアウトがきれいなエラーになること
+
+**未検証**:
+
+- 検索グラウンディングを使う経路（`search`、`company` の検索版、`gemini_search`、
+  `gemini_research_company`）。グラウンディング専用クォータが尽きており 429 になるためで、
+  コード側の問題ではありません（素の生成は同じモデル・同じキーで成功します）。
+- `url_context` でのページ取得成功。試した全URLで `URL_RETRIEVAL_STATUS_ERROR` か、
+  Google 側の 503（"This model is currently experiencing high demand"）でした。
+  API がツールを受け付けること自体は確認済みですが、**取得成功の実例はまだ取れていません。**
+
+いずれも課金を有効にするか、時間をおいて再試行することで確認できるはずです。

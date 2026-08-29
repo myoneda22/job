@@ -20,7 +20,7 @@ from .compare import compare
 from .config import load_settings
 from .errors import ConfigError, GeminiLinkError
 from .gemini import GeminiClient
-from .shukatsu import research_company, research_many
+from .shukatsu import research_company, research_company_from_urls, research_many
 
 
 def _add_common(parser: argparse.ArgumentParser) -> None:
@@ -52,7 +52,20 @@ def build_parser() -> argparse.ArgumentParser:
     company = sub.add_parser("company", help="research one company's new-grad hiring")
     company.add_argument("company")
     company.add_argument("--grad-year", type=int, default=2028)
+    company.add_argument(
+        "--url",
+        action="append",
+        dest="urls",
+        help="read this page instead of searching (repeatable). Use when the "
+             "search-grounding quota is exhausted.",
+    )
     _add_common(company)
+
+    read = sub.add_parser("read-urls", help="answer from specific pages only")
+    read.add_argument("question")
+    read.add_argument("--url", action="append", dest="urls", required=True,
+                      help="page to read (repeatable)")
+    _add_common(read)
 
     batch = sub.add_parser("batch", help="research many companies (one name per line)")
     batch.add_argument("file", help="path to a newline-separated list, or - for stdin")
@@ -152,8 +165,46 @@ def _dispatch(args: argparse.Namespace) -> int:
               if args.json else result.to_text())
         return 0 if result.verdict in ("agree", "partial") else 1
 
+    if args.command == "read-urls":
+        resp = client.generate(
+            "\n".join(args.urls) + "\n\n" + args.question,
+            system=(
+                "指定されたURLのページを実際に読み、そこに書かれている内容だけを使って答えてください。"
+                "ページを取得できなかった場合、記憶や一般知識で補ってはいけません。"
+            ),
+            url_context=True,
+            temperature=0,
+            max_output_tokens=8192,
+            thinking_level="low",
+        )
+        failures = resp.retrieval_failures
+        if args.json:
+            print(json.dumps(
+                {"text": resp.text,
+                 "grounded": not failures and bool(resp.retrieved_urls),
+                 "retrieved": [{"url": u.url, "status": u.status, "ok": u.ok}
+                               for u in resp.retrieved_urls]},
+                ensure_ascii=False, indent=2))
+        else:
+            if failures:
+                print("警告: 以下のページを取得できませんでした。"
+                      "この回答は記憶で補われている可能性があり、信頼できません。", file=sys.stderr)
+                for u in failures:
+                    print(f"  - {u.url} ({u.status})", file=sys.stderr)
+            print(resp.text)
+            if resp.retrieved_urls and not failures:
+                print("\n── 実際に読んだページ ──")
+                for u in resp.retrieved_urls:
+                    print(f"- {u.url}")
+        return 1 if failures or not resp.retrieved_urls else 0
+
     if args.command == "company":
-        result = research_company(args.company, grad_year=args.grad_year, client=client)
+        if getattr(args, "urls", None):
+            result = research_company_from_urls(
+                args.company, args.urls, grad_year=args.grad_year, client=client
+            )
+        else:
+            result = research_company(args.company, grad_year=args.grad_year, client=client)
         print(json.dumps(result.to_dict(), ensure_ascii=False, indent=2)
               if args.json else result.to_remarks())
         return 0
